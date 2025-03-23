@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import emailjs from '@emailjs/browser';
 
 const services = [
@@ -15,12 +15,8 @@ const services = [
   { value: 'material', label: 'Material Selection' },
 ];
 
-export default function ContactPage() {
-  const { ref: sectionRef, inView } = useInView({
-    triggerOnce: true,
-    threshold: 0.1
-  });
-
+// ContactForm component that uses searchParams
+function ContactForm() {
   const searchParams = useSearchParams();
   const [selectedService, setSelectedService] = useState('');
   const [message, setMessage] = useState('');
@@ -100,6 +96,135 @@ export default function ContactPage() {
   };
 
   return (
+    <>
+      {submitStatus.type && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 mb-6 rounded ${
+            submitStatus.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+          }`}
+        >
+          {submitStatus.message}
+        </motion.div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium mb-2">
+            Name*
+          </label>
+          <input
+            type="text"
+            id="name"
+            className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
+            placeholder="Enter Your Name"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium mb-2">
+            Email*
+          </label>
+          <input
+            type="email"
+            id="email"
+            className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
+            placeholder="Enter Your Email"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium mb-2">
+            Phone Number*
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
+            placeholder="Enter Your Phone Number"
+            pattern="[0-9]{10}"
+            title="Please enter a valid 10-digit phone number"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="service" className="block text-sm font-medium mb-2">
+            Service*
+          </label>
+          <select
+            id="service"
+            value={selectedService}
+            onChange={(e) => {
+              setSelectedService(e.target.value);
+              const serviceName = services.find(s => s.value === e.target.value)?.label || '';
+              if (serviceName) {
+                setMessage(`I'm interested in your ${serviceName} service. Please provide more information.`);
+              }
+            }}
+            className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
+            required
+          >
+            <option value="">Select a Service</option>
+            {services.map((service) => (
+              <option key={service.value} value={service.value}>
+                {service.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="message" className="block text-sm font-medium mb-2">
+            Message
+          </label>
+          <textarea
+            id="message"
+            rows={6}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary resize-none"
+            placeholder="Enter Your Message"
+          ></textarea>
+        </div>
+        <motion.button
+          type="submit"
+          disabled={isSubmitting}
+          whileTap={{ scale: 0.98 }}
+          className={`w-full bg-primary text-white py-4 px-8 hover:bg-primary-hover transition-all duration-200 relative overflow-hidden group ${
+            isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+          }`}
+        >
+          <span className="relative z-10">
+            {isSubmitting ? 'SENDING...' : 'SUBMIT'}
+          </span>
+          <div className="absolute inset-0 w-0 bg-white/20 transition-all duration-300 group-hover:w-full" />
+        </motion.button>
+      </form>
+    </>
+  );
+}
+
+// Loading fallback for Suspense
+function ContactFormLoading() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-20 bg-gray-100"></div>
+      <div className="h-20 bg-gray-100"></div>
+      <div className="h-20 bg-gray-100"></div>
+      <div className="h-20 bg-gray-100"></div>
+      <div className="h-32 bg-gray-100"></div>
+      <div className="h-14 bg-gray-200"></div>
+    </div>
+  );
+}
+
+export default function ContactPage() {
+  const { ref: sectionRef, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.1
+  });
+
+  return (
     <main className="min-h-screen">
       {/* Hero Section with Background */}
       <div className="relative h-[400px] bg-black/60 overflow-hidden">
@@ -143,109 +268,9 @@ export default function ContactPage() {
               We will be delighted to answer any queries or questions you may have about our kitchen design services by sending this form.
             </p>
 
-            {submitStatus.type && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-4 mb-6 rounded ${
-                  submitStatus.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                }`}
-              >
-                {submitStatus.message}
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-2">
-                  Name*
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
-                  placeholder="Enter Your Name"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">
-                  Email*
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
-                  placeholder="Enter Your Email"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium mb-2">
-                  Phone Number*
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
-                  placeholder="Enter Your Phone Number"
-                  pattern="[0-9]{10}"
-                  title="Please enter a valid 10-digit phone number"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="service" className="block text-sm font-medium mb-2">
-                  Service*
-                </label>
-                <select
-                  id="service"
-                  value={selectedService}
-                  onChange={(e) => {
-                    setSelectedService(e.target.value);
-                    const serviceName = services.find(s => s.value === e.target.value)?.label || '';
-                    if (serviceName) {
-                      setMessage(`I'm interested in your ${serviceName} service. Please provide more information.`);
-                    }
-                  }}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary"
-                  required
-                >
-                  <option value="">Select a Service</option>
-                  {services.map((service) => (
-                    <option key={service.value} value={service.value}>
-                      {service.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium mb-2">
-                  Message
-                </label>
-                <textarea
-                  id="message"
-                  rows={6}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-none focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-200 hover:border-primary resize-none"
-                  placeholder="Enter Your Message"
-                ></textarea>
-              </div>
-              <motion.button
-                type="submit"
-                disabled={isSubmitting}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full bg-primary text-white py-4 px-8 hover:bg-primary-hover transition-all duration-200 relative overflow-hidden group ${
-                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
-              >
-                <span className="relative z-10">
-                  {isSubmitting ? 'SENDING...' : 'SUBMIT'}
-                </span>
-                <div className="absolute inset-0 w-0 bg-white/20 transition-all duration-300 group-hover:w-full" />
-              </motion.button>
-            </form>
+            <Suspense fallback={<ContactFormLoading />}>
+              <ContactForm />
+            </Suspense>
           </motion.div>
         </div>
       </section>
@@ -416,4 +441,4 @@ export default function ContactPage() {
       </motion.footer>
     </main>
   );
-} 
+}
